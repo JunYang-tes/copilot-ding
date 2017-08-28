@@ -16,6 +16,10 @@ export interface Contact {
   uuid: string,
   user: any
 }
+export interface IMessage {
+  id: string,
+  message: string
+}
 declare module Angluar {
   export interface angular {
     element: (selector: any) => {
@@ -73,6 +77,21 @@ class Ding {
       this.searchResult.onSelect(this.contacts[id])
       return true
     }
+  }
+  async sendMsg(msg: IMessage, times = 1) {
+    if (this.open(msg.id)) {
+      await delay(500)
+      let input = angular.element($(".send-msg-box-wrapper")).scope().input
+      let $input = $(".input-msg-box")
+      while (times-- >= 0) {
+        $input.text("")
+        input.insertText(msg.message)
+        $(".send-message-button").click()
+        await delay(10)
+      }
+      return true
+    }
+    return false
   }
 }
 
