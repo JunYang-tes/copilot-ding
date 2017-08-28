@@ -19,8 +19,12 @@ chrome.webRequest.onHeadersReceived.addListener((e) => {
 
 chrome.runtime.onMessage.addListener(e => {
   if (e === "active") {
-    chrome.windows.getCurrent(win => {
-      chrome.windows.update(win.id, { focused: true })
+    chrome.tabs.query({
+      title: "Ding"
+    }, (tabs) => {
+      let target = tabs.find(t => t.url.startsWith("https://im.dingtalk.com"))
+      chrome.tabs.update(target.id, { active: true })
+      chrome.windows.update(target.windowId, { focused: true })
     })
   }
 })
