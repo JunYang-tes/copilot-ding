@@ -1,0 +1,13 @@
+body #layout-main {
+  width: 100%;
+  height: 100%;
+  flex: initial;
+}
+
+body #layout-main #body {
+  height: 100%;
+}
+
+body .layout-resize-right {
+  width: 8px;
+}

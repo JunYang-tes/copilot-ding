@@ -1,0 +1,32 @@
+{
+  "name": "Ding trick",
+  "description": "Overwrite dingtalk style & Copilot intergration",
+  "version": "1.0",
+  "permissions": [
+    "tabs",
+    "windows",
+    "webRequest",
+    "webRequestBlocking",
+    "https://im.dingtalk.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://im.dingtalk.com/*"
+      ],
+      "css": [
+        "style/overwrite.css"
+      ],
+      "js": [
+        "js/bundle.js",
+        "content.js"
+      ]
+    }
+  ],
+  "background": {
+    "scripts": [
+      "init.js"
+    ]
+  },
+  "manifest_version": 2
+}

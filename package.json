@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "build": "node build.js > dist/bundle.js && node injectify.js dist/bundle.js"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.48",
+    "browserify": "^14.4.0",
+    "tsify": "^3.0.1"
+  }
+}
