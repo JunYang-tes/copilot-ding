@@ -1,4 +1,4 @@
-import { dingApi } from "./api"
+import { dingApi, IMessage } from "./api"
 import { active } from "../utils"
 export interface IContact {
   name: string,
@@ -12,6 +12,9 @@ export async function search(keywords: string): Promise<IContact[]> {
     id: c.id,
     groupName: c.groupName
   }))
+}
+export function sendMsg(message: IMessage, times) {
+  return dingApi.sendMsg(message, times)
 }
 export function open(id: string) {
   if (dingApi.open(id)) {

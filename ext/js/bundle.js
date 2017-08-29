@@ -116,6 +116,22 @@ class Ding {
             return true;
         }
     }
+    sendMsg(msg, times = 1) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.open(msg.id)) {
+                let input = angular.element($(".send-msg-box-wrapper")).scope().input;
+                let $input = $(".input-msg-box");
+                while (times-- >= 0) {
+                    $input.text("");
+                    input.insertText(msg.message);
+                    $(".send-message-button").click();
+                    yield utils_1.delay(10);
+                }
+                return true;
+            }
+            return false;
+        });
+    }
 }
 exports.dingApi = new Ding();
 
@@ -143,6 +159,10 @@ function search(keywords) {
     });
 }
 exports.search = search;
+function sendMsg(message, times) {
+    return api_1.dingApi.sendMsg(message, times);
+}
+exports.sendMsg = sendMsg;
 function open(id) {
     if (api_1.dingApi.open(id)) {
         utils_1.active();
@@ -182,10 +202,7 @@ function startUp() {
     });
 }
 startUp()
-    .then(() => console.log("Ding tick ready!"))
-    .then(() => {
-    chrome.tabs.getCurrent(console.log);
-});
+    .then(() => console.log("Ding tick ready!"));
 
 },{"./CSSSocket":1,"./ding":3,"./title":5,"./utils":6}],5:[function(require,module,exports){
 "use strict";
