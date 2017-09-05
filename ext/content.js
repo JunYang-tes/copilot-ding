@@ -1,7 +1,13 @@
 console.log("content script")
 window.addEventListener("message", (e) => {
   console.log(e)
-  if (e.data === "active") {
-    chrome.runtime.sendMessage("active")
+  switch (e.data) {
+    case "active":
+      chrome.runtime.sendMessage("active")
+      break
+    case "paste":
+      console.log("paste")
+      document.execCommand("paste")
+      break
   }
 })

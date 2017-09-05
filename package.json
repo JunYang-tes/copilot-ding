@@ -6,5 +6,9 @@
     "@types/chrome": "^0.0.48",
     "browserify": "^14.4.0",
     "tsify": "^3.0.1"
+  },
+  "dependencies": {
+    "@types/jquery": "^3.2.12",
+    "underscore": "^1.8.3"
   }
 }

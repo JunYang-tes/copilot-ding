@@ -1,4 +1,6 @@
-import { delay } from "../utils"
+import { delay, monkeyBefore } from "../utils"
+import { EventEmitter } from "events"
+
 export interface IContactGroup {
   children: Contact[],
   text: string,
@@ -20,6 +22,20 @@ export interface IMessage {
   id: string,
   message: string
 }
+export type ActiveConvListener = (opt: { cid: string }) => any
+
+interface IConListScope {
+  convList: {
+    convListObj: {
+      activeConvId: string,
+      lastActiveConvId: string,
+      isLoading: boolean
+    }
+    showType: string[]
+  },
+  tryChangeActiveConv: (cid: string) => any
+}
+
 declare module Angluar {
   export interface angular {
     element: (selector: any) => {
@@ -46,11 +62,41 @@ class Ding {
     searchResult: { [name: string]: IContactGroup[] }
     onSelect: (contact: Contact) => void
   }
+  private conlist: IConListScope
+
+  private events: any // ??
 
   constructor() {
     this.contacts = {}
+    this.events = new EventEmitter()
     this.searchBar = this.getObject(".select2-search-field", "searchBar2")
     this.searchResult = this.getObject(".search-result ul", "multi")
+    this.conlist = $(".conv-lists").scope().$parent
+    let activeConv = this.conlist.tryChangeActiveConv
+    const self = this
+    monkeyBefore(this.searchResult, "onSelect", (contact: Contact) => {
+      this.notifyActive(contact.id)
+    })
+    monkeyBefore(this.conlist, "tryChangeActiveConv", (cid: string) => {
+      this.notifyActive(cid)
+    })
+  }
+  private notifyActive(cid) {
+    new Promise(async (res, rej) => {
+      let c = 100 * 10 * 3
+      while (this.conlist.convList.convListObj.activeConvId !== cid && c > 0) {
+        await delay(100)
+        c /= 100
+      }
+      if (this.conlist.convList.convListObj.activeConvId === cid) {
+        res()
+      } else {
+        rej()
+      }
+    })
+      .then(() => {
+        this.events.emit("ConvActived", { cid })
+      })
   }
   private getObject(selector, name) {
     let scope = angular.element($(selector)).scope()
@@ -72,10 +118,17 @@ class Ding {
     }
     return contacts
   }
+
+  onConvActived(cb: ActiveConvListener) {
+    this.events.on("ConvActived", cb)
+  }
+
   open(id) {
     if (id in this.contacts) {
       this.searchResult.onSelect(this.contacts[id])
       return true
+    } else {
+      this.conlist.tryChangeActiveConv(id)
     }
   }
   async sendMsg(msg: IMessage, times = 1) {
@@ -83,11 +136,9 @@ class Ding {
       await delay(500)
       let input = angular.element($(".send-msg-box-wrapper")).scope().input
       let $input = $(".input-msg-box")
+      let conv = $input.scope().conv
       while (times-- >= 0) {
-        $input.text("")
-        input.insertText(msg.message)
-        $(".send-message-button").click()
-        await delay(10)
+        conv.sendTextMsg(msg.message)
       }
       return true
     }

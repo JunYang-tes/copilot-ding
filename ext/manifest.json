@@ -4,6 +4,8 @@
   "version": "1.0",
   "permissions": [
     "tabs",
+    "clipboardRead",
+    "clipboardWrite",
     "windows",
     "webRequest",
     "webRequestBlocking",

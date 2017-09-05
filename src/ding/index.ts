@@ -24,3 +24,6 @@ export function open(id: string) {
     return false
   }
 }
+dingApi.onConvActived((opt) => {
+  console.log("conv actived")
+})
