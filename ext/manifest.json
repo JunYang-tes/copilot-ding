@@ -2,9 +2,13 @@
   "name": "Ding trick",
   "description": "Overwrite dingtalk style & Copilot intergration",
   "version": "1.0",
+  "web_accessible_resources": [
+    "images/*.png"
+  ],
   "permissions": [
     "tabs",
     "clipboardRead",
+    "notifications",
     "clipboardWrite",
     "windows",
     "webRequest",

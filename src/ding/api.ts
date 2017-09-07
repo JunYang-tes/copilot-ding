@@ -23,7 +23,12 @@ export interface IMessage {
   message: string
 }
 export type ActiveConvListener = (opt: { cid: string }) => any
+export type NewMsg = ({ total: number }) => any
 
+interface IMsgCount {
+  unreadMsgCount: number,
+  unreadMsgCountForDisplay: number
+}
 interface IConListScope {
   convList: {
     convListObj: {
@@ -63,6 +68,7 @@ class Ding {
     onSelect: (contact: Contact) => void
   }
   private conlist: IConListScope
+  private msgCount: IMsgCount
 
   private events: any // ??
 
@@ -80,7 +86,29 @@ class Ding {
     monkeyBefore(this.conlist, "tryChangeActiveConv", (cid: string) => {
       this.notifyActive(cid)
     })
+    this.watchUnreadMsg()
   }
+  private watchUnreadMsg() {
+    this.msgCount = $("all-conv-unread-count").scope().$$childHead.$ctrl
+    let initial = this.msgCount.unreadMsgCount
+    let value = initial
+    Object.defineProperty(this.msgCount, "unreadMsgCount", {
+      get: () => {
+        return value
+      },
+      set: (v) => {
+        value = v;
+        this.events.emit("UnreadChanged")
+        if (value > initial) {
+          this.events.emit("NewMsg", {
+            total: value
+          })
+        }
+        initial = value
+      }
+    })
+  }
+
   private notifyActive(cid) {
     new Promise(async (res, rej) => {
       let c = 100 * 10 * 3
@@ -121,6 +149,9 @@ class Ding {
 
   onConvActived(cb: ActiveConvListener) {
     this.events.on("ConvActived", cb)
+  }
+  onNewMsg(cb: NewMsg) {
+    this.events.on("NewMsg", cb)
   }
 
   open(id) {

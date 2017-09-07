@@ -17,8 +17,25 @@ chrome.webRequest.onHeadersReceived.addListener((e) => {
   }
 }, { urls: ["https://im.dingtalk.com/*"] }, ["responseHeaders", "blocking"])
 
-chrome.runtime.onMessage.addListener(e => {
-  if (e === "active") {
+function promiseify(fn) {
+  return (...args) => new Promise((res, rej) => {
+    args = [...args, (...ret) => res(...ret)]
+    fn(...args)
+  })
+}
+
+const notify = promiseify(chrome.notifications.create)
+const updateNotify = promiseify(chrome.notifications.update)
+const getAllNotifications = promiseify(chrome.notifications.getAll)
+chrome.notifications.onClicked.addListener((id) => {
+  if (id === funtions._notifyId) {
+    functions._notifyId = null
+  }
+})
+
+const functions = {
+  _notifyId: null,
+  active() {
     chrome.tabs.query({
       title: "Ding"
     }, (tabs) => {
@@ -26,5 +43,30 @@ chrome.runtime.onMessage.addListener(e => {
       chrome.tabs.update(target.id, { active: true })
       chrome.windows.update(target.windowId, { focused: true })
     })
+  },
+  async notify(data) {
+    let all = await getAllNotifications()
+    if (functions._notifyId && functions._notifyId in all) {
+      updateNotify(functions._notifyId, {
+        title: data.title,
+        message: data.content
+      })
+    } else {
+      functions._notifyId = await notify({
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("images/dingtalk.png"),
+        title: data.title,
+        message: data.content
+      })
+    }
+  }
+}
+chrome.runtime.onMessage.addListener(async e => {
+  if (e.type && functions[e.type]) {
+    try {
+      await functions[e.type].call(functions, e.data)
+    } catch (e) {
+      console.log(e)
+    }
   }
 })

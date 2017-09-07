@@ -16,6 +16,14 @@ export function active() {
 export function paste() {
   window.postMessage("paste", "*")
 }
+export function notify(title: string, content: string) {
+  window.postMessage(JSON.stringify({
+    type: "notify",
+    data: {
+      title, content
+    }
+  }), "*")
+}
 export function monkeyBefore(obj: any, fnName: string, fn: (...args: any[]) => any) {
   let old = obj[fnName]
   obj[fnName] = function wrapper(...args) {
