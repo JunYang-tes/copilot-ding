@@ -16,6 +16,7 @@ async function write(infile, outfile) {
   let content = (await readFile(infile)).toString()
   content = content.replace(/\\/g, "\\\\")
   content = content.replace(/`/g, "\\\`")
+  content = content.replace(/\${/g, "\\${")
 
   await writeFile(outfile, `
   //Auto-generated

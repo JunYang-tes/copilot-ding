@@ -2016,9 +2016,27 @@ class Ding {
         utils_1.monkeyBefore(this.conlist, "tryChangeActiveConv", (cid) => {
             this.notifyActive(cid);
         });
-        // this.conlist.tryChangeActiveConv = function (cid: string) {
-        //   activeConv(cid)
-        // }
+        this.watchUnreadMsg();
+    }
+    watchUnreadMsg() {
+        this.msgCount = $("all-conv-unread-count").scope().$$childHead.$ctrl;
+        let initial = this.msgCount.unreadMsgCount;
+        let value = initial;
+        Object.defineProperty(this.msgCount, "unreadMsgCount", {
+            get: () => {
+                return value;
+            },
+            set: (v) => {
+                value = v;
+                this.events.emit("UnreadChanged");
+                if (value > initial) {
+                    this.events.emit("NewMsg", {
+                        total: value
+                    });
+                }
+                initial = value;
+            }
+        });
     }
     notifyActive(cid) {
         new Promise((res, rej) => __awaiter(this, void 0, void 0, function* () {
@@ -2062,13 +2080,17 @@ class Ding {
     onConvActived(cb) {
         this.events.on("ConvActived", cb);
     }
+    onNewMsg(cb) {
+        this.events.on("NewMsg", cb);
+    }
     open(id) {
-        // if (id in this.contacts) {
-        //   this.searchResult.onSelect(this.contacts[id])
-        //   return true
-        // } else {
-        this.conlist.tryChangeActiveConv(id);
-        // }
+        if (id in this.contacts) {
+            this.searchResult.onSelect(this.contacts[id]);
+            return true;
+        }
+        else {
+            this.conlist.tryChangeActiveConv(id);
+        }
     }
     sendMsg(msg, times = 1) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2128,6 +2150,10 @@ function open(id) {
 exports.open = open;
 api_1.dingApi.onConvActived((opt) => {
     console.log("conv actived");
+});
+api_1.dingApi.onNewMsg((msg) => {
+    console.log(msg);
+    utils_1.notify("New message", \`You have \${msg.total}  new messages\`);
 });
 
 },{"../utils":10,"./api":5}],7:[function(require,module,exports){
@@ -2244,6 +2270,15 @@ function paste() {
     window.postMessage("paste", "*");
 }
 exports.paste = paste;
+function notify(title, content) {
+    window.postMessage(JSON.stringify({
+        type: "notify",
+        data: {
+            title, content
+        }
+    }), "*");
+}
+exports.notify = notify;
 function monkeyBefore(obj, fnName, fn) {
     let old = obj[fnName];
     obj[fnName] = function wrapper(...args) {

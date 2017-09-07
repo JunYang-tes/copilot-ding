@@ -1,5 +1,5 @@
 import { dingApi, IMessage } from "./api"
-import { active } from "../utils"
+import { active, notify } from "../utils"
 export interface IContact {
   name: string,
   id: string,
@@ -26,4 +26,8 @@ export function open(id: string) {
 }
 dingApi.onConvActived((opt) => {
   console.log("conv actived")
+})
+dingApi.onNewMsg((msg) => {
+  console.log(msg)
+  notify("New message", `You have ${msg.total}  new messages`)
 })
