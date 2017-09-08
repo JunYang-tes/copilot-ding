@@ -27,11 +27,21 @@ function promiseify(fn) {
 const notify = promiseify(chrome.notifications.create)
 const updateNotify = promiseify(chrome.notifications.update)
 const getAllNotifications = promiseify(chrome.notifications.getAll)
+const queryTab = promiseify(chrome.tabs.query)
+const getWindow = promiseify(chrome.windows.get)
+
 chrome.notifications.onClicked.addListener((id) => {
   if (id === funtions._notifyId) {
     functions._notifyId = null
   }
 })
+async function me() {
+  let tab = (await queryTab({ title: "Ding" })).find(t => t.url.startsWith("https://im.dingtalk.com"))
+  let win = (await getWindow(tab.windowId))
+  console.log(win)
+  return win
+}
+
 
 const functions = {
   _notifyId: null,
@@ -45,6 +55,11 @@ const functions = {
     })
   },
   async notify(data) {
+    let win = await me()
+    if (win.focused) {
+      return
+    }
+
     let all = await getAllNotifications()
     if (functions._notifyId && functions._notifyId in all) {
       updateNotify(functions._notifyId, {
