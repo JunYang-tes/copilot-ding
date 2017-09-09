@@ -54,18 +54,33 @@ const functions = {
       chrome.windows.update(target.windowId, { focused: true })
     })
   },
+  /**
+   * 
+   * @param {*} data 
+   * {
+   *  title,message,showInSame,notShowIfFocused
+   * } 
+   */
   async notify(data) {
     let win = await me()
-    if (win.focused) {
+    if (win.focused && data.notShowIfFocused) {
       return
     }
-
-    let all = await getAllNotifications()
-    if (functions._notifyId && functions._notifyId in all) {
-      updateNotify(functions._notifyId, {
-        title: data.title,
-        message: data.content
-      })
+    if (data.showInSame) {
+      let all = await getAllNotifications()
+      if (functions._notifyId && functions._notifyId in all) {
+        updateNotify(functions._notifyId, {
+          title: data.title,
+          message: data.content
+        })
+      } else {
+        functions._notifyId = await notify({
+          type: "basic",
+          iconUrl: chrome.runtime.getURL("images/dingtalk.png"),
+          title: data.title,
+          message: data.content
+        })
+      }
     } else {
       functions._notifyId = await notify({
         type: "basic",

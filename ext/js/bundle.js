@@ -2274,7 +2274,9 @@ function notify(title, content) {
     window.postMessage(JSON.stringify({
         type: "notify",
         data: {
-            title, content
+            title, content,
+            notShowIfFocused: true,
+            showInSame: true
         }
     }), "*");
 }
