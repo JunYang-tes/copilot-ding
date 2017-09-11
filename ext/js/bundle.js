@@ -2010,16 +2010,58 @@ class Ding {
         this.conlist = $(".conv-lists").scope().$parent;
         let activeConv = this.conlist.tryChangeActiveConv;
         const self = this;
-        utils_1.monkeyBefore(this.searchResult, "onSelect", (contact) => {
+        utils_1.monkeyAfter(this.searchResult, "onSelect", (contact) => {
             this.notifyActive(contact.id);
         });
-        utils_1.monkeyBefore(this.conlist, "tryChangeActiveConv", (cid) => {
+        utils_1.monkeyAfter(this.conlist, "tryChangeActiveConv", (cid) => {
             this.notifyActive(cid);
         });
         this.watchUnreadMsg();
+        this.watchNewMsg();
+    }
+    watchNewMsg() {
+        const hack = (handler) => {
+            if (!handler.__hack) {
+                handler.__hack = true;
+                utils_1.monkeyAfter(handler, "listener", ({ message }) => {
+                    console.warn(message);
+                    setTimeout(() => {
+                        console.log("new msg", message);
+                        let convItem = this.getObject(\`.conv-item[menu-data="\${message.baseMessage.conversationId}"]\`, "convItem");
+                        this.events.emit("NewMessage", {
+                            convInfo: convItem.conv,
+                            message
+                        });
+                        console.log(convItem);
+                    }, 0);
+                });
+            }
+        };
+        const hackConvItems = (() => __awaiter(this, void 0, void 0, function* () {
+            let allCon = this.getObject("conv-item", "$$childHead", "convItem", "allConv"); // $("conv-item").scope().$$childHead.convItem.allConv
+            while (!allCon) {
+                yield utils_1.delay(100);
+                allCon = this.getObject("conv-item", "$$childHead", "convItem", "allConv");
+            }
+            Object.keys(allCon)
+                .forEach(key => {
+                let conv = allCon[key];
+                let handler = conv.sdkConv._events.receive_new_message[0];
+                if (handler) {
+                    hack(handler);
+                }
+            });
+        }));
+        // this.onConvActived(hackConvItems)
+        let ob = new MutationObserver(hackConvItems);
+        ob.observe($(".conv-lists-box")[0], {
+            childList: true,
+            subtree: true
+        });
+        hackConvItems();
     }
     watchUnreadMsg() {
-        this.msgCount = $("all-conv-unread-count").scope().$$childHead.$ctrl;
+        this.msgCount = this.getObject("all-conv-unread-count", "$$childHead", "$ctrl"); // $("all-conv-unread-count").scope().$$childHead.$ctrl
         let initial = this.msgCount.unreadMsgCount;
         let value = initial;
         Object.defineProperty(this.msgCount, "unreadMsgCount", {
@@ -2030,7 +2072,7 @@ class Ding {
                 value = v;
                 this.events.emit("UnreadChanged");
                 if (value > initial) {
-                    this.events.emit("NewMsg", {
+                    this.events.emit("UnreadIncrease", {
                         total: value
                     });
                 }
@@ -2056,9 +2098,23 @@ class Ding {
             this.events.emit("ConvActived", { cid });
         });
     }
-    getObject(selector, name) {
+    setValue(selector, value, ...names) {
+        let scope = $(selector).scope();
+        let name = names[0];
+        for (let i = 0; i < names.length - 1; i++) {
+            scope = scope[names[i]];
+        }
+        scope[name] = value;
+    }
+    getObject(selector, ...names) {
         let scope = angular.element($(selector)).scope();
-        return scope[name];
+        for (let name of names) {
+            if (scope == undefined) {
+                return;
+            }
+            scope = scope[name];
+        }
+        return scope;
     }
     search(keyword) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -2080,8 +2136,11 @@ class Ding {
     onConvActived(cb) {
         this.events.on("ConvActived", cb);
     }
-    onNewMsg(cb) {
-        this.events.on("NewMsg", cb);
+    onUnreadIncrease(cb) {
+        this.events.on("UnreadIncrease", cb);
+    }
+    onNewMessage(cb) {
+        this.events.on("NewMessage", cb);
     }
     open(id) {
         if (id in this.contacts) {
@@ -2151,9 +2210,8 @@ exports.open = open;
 api_1.dingApi.onConvActived((opt) => {
     console.log("conv actived");
 });
-api_1.dingApi.onNewMsg((msg) => {
-    console.log(msg);
-    utils_1.notify("New message", \`You have \${msg.total}  new messages\`);
+api_1.dingApi.onNewMessage(({ message, convInfo }) => {
+    utils_1.notify(convInfo.i18nTitle, convInfo.lastMessageContent);
 });
 
 },{"../utils":10,"./api":5}],7:[function(require,module,exports){
@@ -2274,12 +2332,14 @@ function notify(title, content) {
     window.postMessage(JSON.stringify({
         type: "notify",
         data: {
-            title, content
+            title, content,
+            notShowIfFocused: true,
+            showInSame: true
         }
     }), "*");
 }
 exports.notify = notify;
-function monkeyBefore(obj, fnName, fn) {
+function monkeyAfter(obj, fnName, fn) {
     let old = obj[fnName];
     obj[fnName] = function wrapper(...args) {
         let ret = old(...args);
@@ -2290,7 +2350,7 @@ function monkeyBefore(obj, fnName, fn) {
         return ret;
     };
 }
-exports.monkeyBefore = monkeyBefore;
+exports.monkeyAfter = monkeyAfter;
 
 },{}]},{},[7]);
 

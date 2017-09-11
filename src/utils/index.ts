@@ -20,11 +20,13 @@ export function notify(title: string, content: string) {
   window.postMessage(JSON.stringify({
     type: "notify",
     data: {
-      title, content
+      title, content,
+      notShowIfFocused: true,
+      showInSame: true
     }
   }), "*")
 }
-export function monkeyBefore(obj: any, fnName: string, fn: (...args: any[]) => any) {
+export function monkeyAfter(obj: any, fnName: string, fn: (...args: any[]) => any) {
   let old = obj[fnName]
   obj[fnName] = function wrapper(...args) {
     let ret = old(...args)

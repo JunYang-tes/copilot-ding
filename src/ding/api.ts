@@ -1,6 +1,56 @@
-import { delay, monkeyBefore } from "../utils"
+import { delay, monkeyAfter } from "../utils"
 import { EventEmitter } from "events"
-
+interface IDingEventHandler {
+  once: boolean,
+  listenser: Function
+}
+export interface IDingConvInfo {
+  allowedShow: boolean,
+  avatarType: number,
+  baseConversation: any,
+  convId: string,
+  i18nTitle: string,
+  lastMessageContent: string,
+}
+interface IDingConvItemController {
+  conv: IDingConvInfo
+}
+interface IConvItem {
+  messages: IDingMessage[],
+  sdkConv: {
+    baseConversation: any,
+    cid: string,
+    isActive: boolean,
+    isPin: boolean,
+    isSingleChat: boolean,
+    isToMySelf: boolean,
+    isUIVisible: boolean,
+    messages: IDingMessage[],
+    _events: {
+      receive_new_message:
+      IDingEventHandler[]
+    }
+  }
+}
+interface IAllConv {
+  [key: string]: IConvItem
+}
+export interface IDingMessage {
+  cancelAble: boolean,
+  hasAtMe: boolean,
+  baseMessage: {
+    createdAt: number,
+    creatorType: number,
+    messageId: number,
+    conversationId: string,
+    content: {
+      contentType: number,//1 textContent
+      textContent?: {
+        text: string
+      }
+    }
+  }
+}
 export interface IContactGroup {
   children: Contact[],
   text: string,
@@ -23,6 +73,12 @@ export interface IMessage {
   message: string
 }
 export type ActiveConvListener = (opt: { cid: string }) => any
+export type UnreadIncrease = ({ total: number }) => any
+export interface INewMessageEventArg {
+  message: IDingMessage,
+  convInfo: IDingConvInfo
+}
+export type NewMessage = (evt: INewMessageEventArg) => any
 export type NewMsg = ({ total: number }) => any
 
 interface IMsgCount {
@@ -80,16 +136,61 @@ class Ding {
     this.conlist = $(".conv-lists").scope().$parent
     let activeConv = this.conlist.tryChangeActiveConv
     const self = this
-    monkeyBefore(this.searchResult, "onSelect", (contact: Contact) => {
+    monkeyAfter(this.searchResult, "onSelect", (contact: Contact) => {
       this.notifyActive(contact.id)
     })
-    monkeyBefore(this.conlist, "tryChangeActiveConv", (cid: string) => {
+    monkeyAfter(this.conlist, "tryChangeActiveConv", (cid: string) => {
       this.notifyActive(cid)
     })
     this.watchUnreadMsg()
+    this.watchNewMsg()
+  }
+  private watchNewMsg() {
+    const hack = (handler) => {
+      if (!handler.__hack) {
+        handler.__hack = true
+        monkeyAfter(handler, "listener", ({ message }: { message: IDingMessage }) => {
+          console.warn(message)
+          setTimeout(() => {
+            console.log("new msg", message)
+            let convItem: IDingConvItemController = this.getObject(`.conv-item[menu-data="${message.baseMessage.conversationId}"]`,
+              "convItem"
+            )
+            this.events.emit("NewMessage", {
+              convInfo: convItem.conv,
+              message
+            })
+            console.log(convItem)
+          }, 0)
+        })
+      }
+    }
+    const hackConvItems = (async () => {
+      let allCon = this.getObject("conv-item", "$$childHead", "convItem", "allConv") // $("conv-item").scope().$$childHead.convItem.allConv
+      while (!allCon) {
+        await delay(100)
+        allCon = this.getObject("conv-item", "$$childHead", "convItem", "allConv")
+      }
+      Object.keys(allCon)
+        .forEach(key => {
+          let conv: IConvItem = allCon[key]
+          let handler = conv.sdkConv._events.receive_new_message[0]
+          if (handler) {
+            hack(handler)
+          }
+        })
+    })
+    // this.onConvActived(hackConvItems)
+    let ob = new MutationObserver(hackConvItems)
+    ob.observe($(".conv-lists-box")[0], {
+      childList: true,
+      subtree: true
+    })
+    hackConvItems()
   }
   private watchUnreadMsg() {
-    this.msgCount = $("all-conv-unread-count").scope().$$childHead.$ctrl
+    this.msgCount = this.getObject("all-conv-unread-count",
+      "$$childHead", "$ctrl")  // $("all-conv-unread-count").scope().$$childHead.$ctrl
     let initial = this.msgCount.unreadMsgCount
     let value = initial
     Object.defineProperty(this.msgCount, "unreadMsgCount", {
@@ -100,7 +201,7 @@ class Ding {
         value = v;
         this.events.emit("UnreadChanged")
         if (value > initial) {
-          this.events.emit("NewMsg", {
+          this.events.emit("UnreadIncrease", {
             total: value
           })
         }
@@ -126,9 +227,23 @@ class Ding {
         this.events.emit("ConvActived", { cid })
       })
   }
-  private getObject(selector, name) {
+  private setValue(selector, value, ...names) {
+    let scope = $(selector).scope()
+    let name = names[0]
+    for (let i = 0; i < names.length - 1; i++) {
+      scope = scope[names[i]]
+    }
+    scope[name] = value
+  }
+  private getObject(selector, ...names) {
     let scope = angular.element($(selector)).scope()
-    return scope[name]
+    for (let name of names) {
+      if (scope == undefined) {
+        return;
+      }
+      scope = scope[name]
+    }
+    return scope
   }
   async search(keyword): Promise<Contact[]> {
     this.searchBar.activate()
@@ -150,8 +265,11 @@ class Ding {
   onConvActived(cb: ActiveConvListener) {
     this.events.on("ConvActived", cb)
   }
-  onNewMsg(cb: NewMsg) {
-    this.events.on("NewMsg", cb)
+  onUnreadIncrease(cb: UnreadIncrease) {
+    this.events.on("UnreadIncrease", cb)
+  }
+  onNewMessage(cb: NewMessage) {
+    this.events.on("NewMessage", cb)
   }
 
   open(id) {
