@@ -27,7 +27,6 @@ export function open(id: string) {
 dingApi.onConvActived((opt) => {
   console.log("conv actived")
 })
-dingApi.onNewMsg((msg) => {
-  console.log(msg)
-  notify("New message", `You have ${msg.total}  new messages`)
+dingApi.onNewMessage(({ message, convInfo }) => {
+  notify(convInfo.i18nTitle, convInfo.lastMessageContent)
 })
