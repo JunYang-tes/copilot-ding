@@ -1878,7 +1878,13 @@ class CSSSocket {
         const connect = () => {
             stateChange("connecting");
             console.log("connect ", url);
-            this.ws = new WebSocket(url);
+            try {
+                this.ws = new WebSocket(url);
+            }
+            catch (e) {
+                setTimeout(connect, reconnectDelay);
+                return;
+            }
             let reconnectTimer;
             this.ws.addEventListener('open', () => {
                 stateChange("connected");
@@ -2151,7 +2157,7 @@ class Ding {
             this.conlist.tryChangeActiveConv(id);
         }
     }
-    sendMsg(msg, times = 1) {
+    sendMsg(msg, times = 1, delayTime = 1000) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.open(msg.id)) {
                 yield utils_1.delay(500);
@@ -2160,6 +2166,7 @@ class Ding {
                 let conv = $input.scope().conv;
                 while (times-- >= 0) {
                     conv.sendTextMsg(msg.message);
+                    yield utils_1.delay(delayTime);
                 }
                 return true;
             }
