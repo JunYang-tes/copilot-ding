@@ -34,7 +34,13 @@ export class CSSSocket {
     const connect = () => {
       stateChange("connecting")
       console.log("connect ", url)
-      this.ws = new WebSocket(url)
+      try {
+
+        this.ws = new WebSocket(url)
+      } catch (e) {
+        setTimeout(connect, reconnectDelay);
+        return;
+      }
       let reconnectTimer;
       this.ws.addEventListener('open', () => {
         stateChange("connected")
