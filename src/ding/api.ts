@@ -280,7 +280,7 @@ class Ding {
       this.conlist.tryChangeActiveConv(id)
     }
   }
-  async sendMsg(msg: IMessage, times = 1, delayTime = 1000) {
+  async sendMsg(msg: IMessage, times = 1, delayTime = 0) {
     if (this.open(msg.id)) {
       await delay(500)
       let input = angular.element($(".send-msg-box-wrapper")).scope().input
